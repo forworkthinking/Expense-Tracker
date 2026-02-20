@@ -34,7 +34,7 @@ try {
   console.warn("Firebase config not provided. Persistence will be mocked.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
 const WEBHOOK_URL = "https://hook.eu1.make.com/d15nboistgbaqaf5yk9fgcd0092ofefb";
 
 const App = () => {
