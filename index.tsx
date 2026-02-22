@@ -49,12 +49,30 @@ const App = () => {
       
       // 3. Update the screen
       if (data.status === "success" && data.allRecords) {
-          // Set the list of expenses (Make sure Make.com is sending the full array!)
-          setExpenses(data.allRecords);
           
-          // Calculate the total sum using your exact "Amount" field
-          const calculatedTotal = data.allRecords.reduce((sum: number, item: any) => {
-              return sum + Number(item.Amount || 0);
+          // --- MAGIC HELPER: Looks inside the Firestore 'Fields' folder ---
+          const getVal = (item: any, key: string) => item.Fields?.[key] || item[key];
+
+          // Filter out identical duplicates
+          let uniqueRecords = data.allRecords.filter((item: any, index: number, self: any[]) =>
+            index === self.findIndex((t) => (
+              getVal(t, 'Store') === getVal(item, 'Store') && 
+              getVal(t, 'Amount') === getVal(item, 'Amount') && 
+              getVal(t, 'Date') === getVal(item, 'Date')
+            ))
+          );
+
+          // Sort by Date (Newest first)
+          uniqueRecords.sort((a: any, b: any) => {
+              return new Date(getVal(b, 'Date')).getTime() - new Date(getVal(a, 'Date')).getTime();
+          });
+
+          // Set the clean, sorted list of expenses
+          setExpenses(uniqueRecords);
+          
+          // Calculate the total sum safely from the Fields folder
+          const calculatedTotal = uniqueRecords.reduce((sum: number, item: any) => {
+              return sum + Number(getVal(item, 'Amount') || 0);
           }, 0);
           setTotal(calculatedTotal);
       }
@@ -90,7 +108,7 @@ const App = () => {
           </p>
         </div>
         <div className="glass p-6 rounded-2xl">
-          <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Items Processed</p>
+          <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Unique Items Processed</p>
           <p className="text-4xl font-bold text-blue-400">{expenses.length}</p>
         </div>
       </div>
@@ -170,10 +188,13 @@ const App = () => {
             </div>
           ) : (
             expenses.map((expense, index) => {
-              const storeName = expense.Store || 'Unknown Store';
-              const dateText = expense.Date || 'No Date';
-              const amountNum = expense.Amount || 0;
-              const categoryText = expense['Expense Category'] || expense.Item || 'General';
+              // Pulling the display data safely out of the Fields folder
+              const getVal = (item: any, key: string) => item.Fields?.[key] || item[key];
+              
+              const storeName = getVal(expense, 'Store') || 'Unknown Store';
+              const dateText = getVal(expense, 'Date') || 'No Date';
+              const amountNum = getVal(expense, 'Amount') || 0;
+              const categoryText = getVal(expense, 'Expense Category') || getVal(expense, 'Item') || 'General';
 
               return (
                 <div 
