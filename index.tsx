@@ -50,17 +50,43 @@ const App = () => {
       // 3. Update the screen
       if (data.status === "success" && data.allRecords) {
           
-          // --- MAGIC HELPER: Looks inside the Firestore 'Fields' folder ---
-          const getVal = (item: any, key: string) => item.Fields?.[key] || item[key];
+          // --- THE INVINCIBLE DATA HUNTER ---
+          // This forcefully finds your data no matter how Make.com formatted or capitalized it
+          const getVal = (item: any, targetKey: string): any => {
+            if (!item) return undefined;
+            
+            // Case-insensitive search
+            const findKey = (obj: any, key: string) => {
+              const foundKey = Object.keys(obj).find(k => k.toLowerCase() === key.toLowerCase());
+              return foundKey ? obj[foundKey] : undefined;
+            };
 
-          // Filter out identical duplicates
-          let uniqueRecords = data.allRecords.filter((item: any, index: number, self: any[]) =>
-            index === self.findIndex((t) => (
-              getVal(t, 'Store') === getVal(item, 'Store') && 
-              getVal(t, 'Amount') === getVal(item, 'Amount') && 
-              getVal(t, 'Date') === getVal(item, 'Date')
-            ))
-          );
+            // Check the root, then check inside 'Fields' or 'fields' folders
+            let val = findKey(item, targetKey);
+            if (val === undefined) {
+              const fieldsFolder = findKey(item, 'fields');
+              if (fieldsFolder) val = findKey(fieldsFolder, targetKey);
+            }
+
+            // If Firestore sent raw API objects (e.g., { stringValue: "nodi" }), extract the text
+            if (val !== null && typeof val === 'object') {
+              return val.stringValue || val.integerValue || val.doubleValue || val.numberValue || Object.values(val)[0] || '';
+            }
+            return val;
+          };
+
+          // Filter out truly identical duplicates using our invincible hunter
+          let uniqueRecords = data.allRecords.filter((item: any, index: number, self: any[]) => {
+            const currentStore = getVal(item, 'Store');
+            const currentAmount = getVal(item, 'Amount');
+            const currentDate = getVal(item, 'Date');
+            
+            return index === self.findIndex((t) => (
+              getVal(t, 'Store') === currentStore && 
+              getVal(t, 'Amount') === currentAmount && 
+              getVal(t, 'Date') === currentDate
+            ));
+          });
 
           // Sort by Date (Newest first)
           uniqueRecords.sort((a: any, b: any) => {
@@ -70,9 +96,10 @@ const App = () => {
           // Set the clean, sorted list of expenses
           setExpenses(uniqueRecords);
           
-          // Calculate the total sum safely from the Fields folder
+          // Safely calculate the total sum using the hunter
           const calculatedTotal = uniqueRecords.reduce((sum: number, item: any) => {
-              return sum + Number(getVal(item, 'Amount') || 0);
+              const amt = getVal(item, 'Amount');
+              return sum + (Number(amt) || 0);
           }, 0);
           setTotal(calculatedTotal);
       }
@@ -188,8 +215,22 @@ const App = () => {
             </div>
           ) : (
             expenses.map((expense, index) => {
-              // Pulling the display data safely out of the Fields folder
-              const getVal = (item: any, key: string) => item.Fields?.[key] || item[key];
+              // Pulling the display data safely out using the invincible hunter!
+              const getVal = (item: any, targetKey: string): any => {
+                const findKey = (obj: any, key: string) => {
+                  const foundKey = Object.keys(obj || {}).find(k => k.toLowerCase() === key.toLowerCase());
+                  return foundKey ? obj[foundKey] : undefined;
+                };
+                let val = findKey(item, targetKey);
+                if (val === undefined) {
+                  const fieldsFolder = findKey(item, 'fields');
+                  if (fieldsFolder) val = findKey(fieldsFolder, targetKey);
+                }
+                if (val !== null && typeof val === 'object') {
+                  return val.stringValue || val.integerValue || val.doubleValue || val.numberValue || Object.values(val)[0] || '';
+                }
+                return val;
+              };
               
               const storeName = getVal(expense, 'Store') || 'Unknown Store';
               const dateText = getVal(expense, 'Date') || 'No Date';
@@ -203,7 +244,7 @@ const App = () => {
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xl font-bold text-blue-400">
-                      {storeName.charAt(0).toUpperCase()}
+                      {String(storeName).charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h4 className="font-semibold text-white">{storeName}</h4>
