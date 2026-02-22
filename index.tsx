@@ -52,10 +52,9 @@ const App = () => {
       if (data.status === "success") {
           setTotal(data.totalSum || 0);
           
-          // Make.com sends the array as a JSON string, so we parse it back into a list
+          // Make.com already formatted it perfectly, so we just set it directly!
           if (data.allRecords) {
-              const parsedRecords = JSON.parse(data.allRecords);
-              setExpenses(parsedRecords);
+              setExpenses(data.allRecords);
           }
       }
 
