@@ -19,7 +19,6 @@ const App = () => {
       setSelectedFile(file);
       setError(null);
       setSuccessMsg(null);
-      // Notice: We removed the blocked AI Preview function here!
     }
   };
 
@@ -45,17 +44,19 @@ const App = () => {
         throw new Error(`Webhook failed: ${response.status} - ${errorText}`);
       }
 
-      // 2. Catch the new data coming back from Make.com!
+      // 2. Catch the new data coming back from Make.com
       const data = await response.json();
       
-      // 3. Update the screen with the Make.com math and database history
-      if (data.status === "success") {
-          setTotal(data.totalSum || 0);
+      // 3. Update the screen
+      if (data.status === "success" && data.allRecords) {
+          // Set the list of expenses
+          setExpenses(data.allRecords);
           
-          // Make.com already formatted it perfectly, so we just set it directly!
-          if (data.allRecords) {
-              setExpenses(data.allRecords);
-          }
+          // Calculate the total sum using your exact "Amount" field
+          const calculatedTotal = data.allRecords.reduce((sum: number, item: any) => {
+              return sum + Number(item.Amount || 0);
+          }, 0);
+          setTotal(calculatedTotal);
       }
 
       setSuccessMsg("Uploaded successfully!");
@@ -168,28 +169,36 @@ const App = () => {
               No entries found. Upload your first receipt to see history!
             </div>
           ) : (
-            expenses.map((expense, index) => (
-              <div 
-                key={expense.id || index} 
-                className="glass p-4 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-colors group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xl font-bold text-blue-400">
-                    {expense.merchant?.charAt(0).toUpperCase() || '?'}
+            expenses.map((expense, index) => {
+              // Now mapped exactly to your Firestore database columns!
+              const storeName = expense.Store || 'Unknown Store';
+              const dateText = expense.Date || 'No Date';
+              const amountNum = expense.Amount || 0;
+              const categoryText = expense['Expense Category'] || expense.Item || 'General';
+
+              return (
+                <div 
+                  key={expense.id || index} 
+                  className="glass p-4 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-colors group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xl font-bold text-blue-400">
+                      {storeName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white">{storeName}</h4>
+                      <p className="text-slate-400 text-sm">{dateText} • {categoryText}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-white">{expense.merchant || 'Unknown Merchant'}</h4>
-                    <p className="text-slate-400 text-sm">{expense.date || 'Recent'}</p>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-white">
+                      ${Number(amountNum).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest">USD</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-white">
-                    ${(expense.Amount || expense.amount || 0).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-slate-500 uppercase tracking-widest">{expense.currency || 'USD'}</p>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </section>
