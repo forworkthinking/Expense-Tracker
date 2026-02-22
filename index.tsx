@@ -49,7 +49,7 @@ const App = () => {
       
       // 3. Update the screen
       if (data.status === "success" && data.allRecords) {
-          // Set the list of expenses
+          // Set the list of expenses (Make sure Make.com is sending the full array!)
           setExpenses(data.allRecords);
           
           // Calculate the total sum using your exact "Amount" field
@@ -86,7 +86,7 @@ const App = () => {
         <div className="glass p-6 rounded-2xl">
           <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Total Monthly Expense</p>
           <p className="text-4xl font-bold text-white">
-            ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            HK${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="glass p-6 rounded-2xl">
@@ -170,7 +170,6 @@ const App = () => {
             </div>
           ) : (
             expenses.map((expense, index) => {
-              // Now mapped exactly to your Firestore database columns!
               const storeName = expense.Store || 'Unknown Store';
               const dateText = expense.Date || 'No Date';
               const amountNum = expense.Amount || 0;
@@ -192,9 +191,9 @@ const App = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-xl font-bold text-white">
-                      ${Number(amountNum).toFixed(2)}
+                      HK${Number(amountNum).toFixed(2)}
                     </p>
-                    <p className="text-xs text-slate-500 uppercase tracking-widest">USD</p>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest">HKD</p>
                   </div>
                 </div>
               );
